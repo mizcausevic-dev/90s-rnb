@@ -1,0 +1,28 @@
+--- a/render_audio.py
++++ b/render_audio.py
+@@ -127,9 +127,9 @@
+         "drums": add_drums,
+         "percussion": add_percussion,
+         "bass": lambda note: add_tone(note, "sine", 9000.0, 0.008, 0.03, 1.2),
++        "keys": lambda note: add_tone(note, "sine", 3200.0, 0.02, 0.05, 0.8),
+         "motif": lambda note: add_tone(note, "triangle", 5200.0, 0.012, 0.04, 0.6),
+-        "harmonic-field": lambda note: add_tone(note, "sine", 2800.0, 0.03, 0.06, 0.15),
+-        "atmosphere": lambda note: add_tone(note, "sine", 1800.0, 0.08, 0.1, 0.05),
++        "pad": lambda note: add_tone(note, "sine", 1800.0, 0.06, 0.08, 0.2),
+     }
+     rendered = []
+     for part in parts:
+@@ -175,11 +175,10 @@
+         "voices": rendered,
+         "mapping": {
+             "drums": "Bass drum is a short falling sine. Snare, hats, and crash are short noise bursts with different decays. The MIDI pitch selects the burst. No controller is read.",
+-            "percussion": "Clave and woodblock are short sines. Congas are lower sines. Tambourine and maracas are short noise. The MIDI pitch selects the voice.",
+             "bass": "Sine at the written pitch, short attack, held for the written duration.",
++            "keys": "Quiet sine at the written pitch, held for the written duration.",
+             "motif": "Triangle at the written pitch, short attack, held for the written duration.",
+-            "harmonic-field": "Quiet sine at the written pitch, held for the written duration.",
+-            "atmosphere": "Quieter sine with a slow attack at the written pitch. The attack is this synth envelope. The MIDI note is only pitch, start, duration, and velocity.",
++            "pad": "Quieter sine with a slower attack at the written pitch. The attack is this synth envelope. The MIDI note is only pitch, start, duration, and velocity.",
+         },
+         "mapping_note": "These voices are preview mappings. They are not encoded in the MIDI file.",
+     }

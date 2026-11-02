@@ -1,0 +1,47 @@
+--- a/screening.py
++++ b/screening.py
+@@ -26,7 +26,7 @@
+             "h": 720,
+             "label": "Hero",
+             "role": "Catalog still and film plate",
+-            "alt": "Illustration of horizontal lanes on a deep teal field, with long pad bars and short drum ticks. Not a photograph of a studio or of performers.",
++            "alt": "Illustration of a wine field, an empty cream band, and five music lanes. Not a photograph of a studio or of performers.",
+             "lineage": "Wide framing painted at 1280 by 720. The film plate is this picture before the disclosure line is drawn.",
+             "bytes": _bytes(root, "art/hero.jpg"),
+         },
+@@ -37,7 +37,7 @@
+             "h": 1080,
+             "label": "Square",
+             "role": "Square still, also the Instagram square",
+-            "alt": "Square illustration of teal lanes, pad bars, and drum ticks. Not a photograph of a studio or of performers.",
++            "alt": "Square illustration of a wine field, an empty cream band, and five music lanes. Not a photograph of a studio or of performers.",
+             "lineage": "Painted again at 1080 by 1080. It is not a scale of the hero. The Instagram square is a byte copy of this file.",
+             "bytes": _bytes(root, "art/square.jpg"),
+         },
+@@ -48,7 +48,7 @@
+             "h": 1350,
+             "label": "Portrait",
+             "role": "Instagram portrait",
+-            "alt": "Vertical crop of the teal lane illustration. Not a photograph of a studio or of performers.",
++            "alt": "Vertical crop of the wine-field illustration, cream band at the top. Not a photograph of a studio or of performers.",
+             "lineage": "From the square: crop 864 by 1080 starting 108 pixels in from the left, then scale to 1080 by 1350.",
+             "bytes": _bytes(root, "social/instagram-Cursor/portrait.jpg"),
+         },
+@@ -59,7 +59,7 @@
+             "h": 900,
+             "label": "Card",
+             "role": "X card",
+-            "alt": "Wide card of the teal lane illustration. Not a photograph of a studio or of performers.",
++            "alt": "Wide card of the wine-field illustration with an empty cream band. Not a photograph of a studio or of performers.",
+             "lineage": "The 1280 by 720 hero scaled to 1600 by 900.",
+             "bytes": _bytes(root, "social/x-Cursor/card.jpg"),
+         },
+@@ -81,7 +81,7 @@
+     frames = config["frames"]
+     data = json.dumps(frames, ensure_ascii=False).replace("<", "\\u003c")
+     preview_seconds = f"{config['preview_seconds']:.3f}"
+-    film_seconds = f"{config['film_seconds']:.2f}"
++    film_seconds = f"{config['film_seconds']:.3f}"
+     colors = config["colors"]
+     return TEMPLATE.replace("__DATA__", data).replace("__PACK__", config["pack_name"]).replace(
+         "__SUBJECT__", config["subject"]
