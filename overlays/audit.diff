@@ -1,0 +1,10 @@
+--- a/audit.py
++++ b/audit.py
+@@ -207,7 +207,7 @@
+     readme = (root / "README.md").read_text(encoding="utf-8")
+     add(
+         "README describes this pack",
+-        "PASS" if "Psybient" in readme and "simple-synth" in readme and "python3 tools/build_pack.py" in readme else "FAIL",
++        "PASS" if "90s R&B" in readme and "simple-synth" in readme and "python3 tools/build_pack.py" in readme else "FAIL",
+         "README.md",
+     )
