@@ -1,0 +1,190 @@
+--- a/validate.py
++++ b/validate.py
+@@ -10,7 +10,7 @@
+ from collections import Counter
+ from pathlib import Path
+ 
+-from tools.compose import DRUM_MAP, PERC_MAP, ROLE_NAME
++from tools.compose import BAR, CHORD_PCS, DRUM_MAP, ROLE_NAME, VOCAL_CEILING
+ from tools.midi_io import (
+     BAR_TICKS_4_4,
+     PPQ,
+@@ -23,16 +23,15 @@
+     write_midi,
+ )
+ 
+-VALIDATOR_VERSION = "psybient-1.0.0"
++VALIDATOR_VERSION = "90s-rnb-1.0.0"
+ ROLE_LIMITS = {
+-    "drums": {"lo": 36, "hi": 51, "poly": 4},
+-    "percussion": {"lo": 54, "hi": 76, "poly": 4},
+-    "bass": {"lo": 28, "hi": 55, "poly": 1},
+-    "motif": {"lo": 60, "hi": 84, "poly": 1},
+-    "harmonic-field": {"lo": 48, "hi": 76, "poly": 5},
+-    "atmosphere": {"lo": 52, "hi": 88, "poly": 3},
++    "drums": {"lo": 36, "hi": 49, "poly": 4},
++    "bass": {"lo": 28, "hi": 52, "poly": 1},
++    "keys": {"lo": 48, "hi": VOCAL_CEILING, "poly": 4},
++    "motif": {"lo": 60, "hi": VOCAL_CEILING, "poly": 1},
++    "pad": {"lo": 48, "hi": 72, "poly": 3},
+ }
+-PERCUSSION_ROLES = {"drums", "percussion"}
++PERCUSSION_ROLES = {"drums"}
+ 
+ 
+ def sha256_bytes(data: bytes) -> str:
+@@ -205,9 +204,8 @@
+             errors.append(f"{part['path']} velocity {note['velocity']}")
+             break
+     if part["role"] in PERCUSSION_ROLES:
+-        allowed = DRUM_MAP if part["role"] == "drums" else PERC_MAP
+-        if any(note["channel"] != 9 or note["pitch"] not in allowed for note in notes):
+-            errors.append(f"{part['path']} percussion map")
++        if any(note["channel"] != 9 or note["pitch"] not in DRUM_MAP for note in notes):
++            errors.append(f"{part['path']} drum map")
+     else:
+         if any(note["channel"] != part["channel"] for note in notes):
+             errors.append(f"{part['path']} channel")
+@@ -322,7 +320,7 @@
+         {"channel": 0, "pitch": 42, "performed_start": 240, "duration": 240, "velocity": 80},
+     ]
+     events = preamble("Bass", bpm_to_us(82), BAR_TICKS_4_4) + notes_to_events(bad_notes)
+-    path = Path("/tmp/psybient-negative-overlap.mid")
++    path = Path("/tmp/90s-rnb-negative-overlap.mid")
+     write_midi(path, 0, [(events, BAR_TICKS_4_4)])
+     parsed = parse_midi(path.read_bytes())
+     notes = pair_notes(parsed["tracks"][0])
+@@ -343,6 +341,7 @@
+         by_role.setdefault(part["role"], {}).setdefault(part["kit_id"], {})[part["variation"]] = part
+     errors = []
+     seen_by_role = {}
++    motif_intervals = []
+     for role, kits_map in by_role.items():
+         seen = {}
+         for kit_id, versions in kits_map.items():
+@@ -352,14 +351,83 @@
+             sig_b = tuple((note["performed_start"], note["pitch"], note["duration"]) for note in right)
+             if sig_a == sig_b:
+                 errors.append(f"{kit_id} {role} variations match")
++            if len(left) == len(right) and all(
++                a["performed_start"] == b["performed_start"] and a["duration"] == b["duration"]
++                for a, b in zip(left, right)
++            ):
++                deltas = {b["pitch"] - a["pitch"] for a, b in zip(left, right)}
++                if len(deltas) == 1:
++                    errors.append(f"{kit_id} {role} variation B is a transpose of A")
++                    if all(a["velocity"] == b["velocity"] for a, b in zip(left, right)):
++                        errors.append(f"{kit_id} {role} transposed clone keeps the velocities")
+             attacks = tuple(note["performed_start"] for note in left)
+             if attacks in seen:
+                 errors.append(f"{role} variation A attacks repeat {seen[attacks]} and {kit_id}")
+             seen[attacks] = kit_id
++            if role == "motif":
++                pitches = [note["pitch"] for note in left]
++                motif_intervals.append(tuple(b - a for a, b in zip(pitches, pitches[1:])))
+         seen_by_role[role] = len(seen)
++    if len(motif_intervals) != len(set(motif_intervals)):
++        errors.append("motif hooks share an interval list")
+     return {"pass": not errors, "errors": errors, "roles": seen_by_role}
+ 
+ 
++def _chord_check(catalog: dict, score: dict) -> dict:
++    errors = []
++    by_id = {part["id"]: part for part in score["parts"]}
++    for kit in catalog["kits"]:
++        for variation, windows in kit["chords"].items():
++            part = by_id[f"{kit['id']}.keys.{variation}"]
++            covered = 0
++            for name, start_bar, bars in windows:
++                lo = start_bar * BAR
++                hi = (start_bar + bars) * BAR
++                group = [note for note in part["notes"] if lo <= note["performed_start"] < hi]
++                if not group:
++                    errors.append(f"{part['id']} empty {name}")
++                    continue
++                found = {note["pitch"] % 12 for note in group}
++                if found != CHORD_PCS[name]:
++                    errors.append(f"{part['id']} {name} {sorted(found)} != {sorted(CHORD_PCS[name])}")
++                covered += len(group)
++            if covered != len(part["notes"]):
++                errors.append(f"{part['id']} keys notes outside named chords")
++    return {"pass": not errors, "errors": errors, "windows": sum(len(kit["chords"]["a"]) + len(kit["chords"]["b"]) for kit in catalog["kits"])}
++
++
++def _section_check(score: dict) -> dict:
++    errors = []
++    rows = []
++    forms = []
++    for arrangement in score["arrangements"]:
++        sections = []
++        for index in range(4):
++            start = index * 8 * BAR_TICKS_4_4
++            end = start + 8 * BAR_TICKS_4_4
++            roles = []
++            total = 0
++            for track in arrangement["tracks"]:
++                if not track["source_part"]:
++                    continue
++                count = sum(1 for note in track["notes"] if start <= note["performed_start"] < end)
++                total += count
++                if count:
++                    roles.append(track["name"])
++            sections.append({"roles": roles, "notes": total})
++        role_sets = [tuple(section["roles"]) for section in sections]
++        forms.append(tuple(role_sets))
++        if len(set(role_sets)) < 4:
++            errors.append(f"{arrangement['kit_id']} repeated section {role_sets}")
++        counts = [section["notes"] for section in sections]
++        if max(counts) - min(counts) < 12:
++            errors.append(f"{arrangement['kit_id']} section counts {counts}")
++        rows.append({"kit_id": arrangement["kit_id"], "sections": sections})
++    if len(set(forms)) != 4:
++        errors.append("arrangement forms are not distinct")
++    return {"pass": not errors, "errors": errors, "kits": rows}
++
++
+def validate_tree(root: Path) -> dict:
+     catalog = load_json(root / "catalog" / "catalog-Cursor.json")
+     score = load_json(root / "score" / "canonical-score-Cursor.json")
+@@ -413,6 +481,18 @@
+     identity = _recompute_identity(score["parts"])
+     if not identity["pass"]:
+         errors.extend(identity["errors"])
++    chord_check = _chord_check(catalog, score)
++    if not chord_check["pass"]:
++        errors.extend(chord_check["errors"])
++    section_check = _section_check(score)
++    if not section_check["pass"]:
++        errors.extend(section_check["errors"])
++    for part in score["parts"]:
++        if part["role"] == "drums":
++            continue
++        for note in part["notes"]:
++            if note["pitch"] > VOCAL_CEILING:
++                errors.append(f"{part['id']} above E5")
+     negative = _negative_tests()
+     if any(value != "PASS" for value in negative.values()):
+         errors.append(f"negative tests {negative}")
+@@ -437,8 +517,9 @@
+         "percussion_map": {
+             "channel": 10,
+             "drums": {str(pitch): name for pitch, name in DRUM_MAP.items()},
+-            "percussion": {str(pitch): name for pitch, name in PERC_MAP.items()},
+         },
++        "chord_names": chord_check,
++        "section_contrast": section_check,
+         "repairs": [],
+         "repair_note": "No repairs were applied. This report is the first validation pass of the delivered bytes.",
+         "listening": "No human listening audition was performed for this build.",
+@@ -449,7 +530,10 @@
+             "one end-of-track at the declared container",
+             "explicit note pairing",
+             "boundaries, velocity, range, monophonic bass, role polyphony caps",
+-            "channel 10 drums and percussion limited to the declared maps",
++            "channel 10 drums limited to the declared map",
++            "keys chord names match the pitch classes in each window",
++            "each arrangement has four different role sets",
++            "pitched notes stay at or below E5",
+             "same-pitch overlap is illegal, including across channel 10 arrangement tracks",
+             "note-offs precede note-ons that share a tick",
+             "no program changes or other channel messages",
