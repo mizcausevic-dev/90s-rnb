@@ -1,0 +1,57 @@
+{
+  "generator": "generator/art.py",
+  "images": {
+    "art/hero.jpg": {
+      "sha256": "5cbb843c4458df7a013b7916697279bee43bbeba4fc5a97a29780786fbf2869a",
+      "size": [
+        1280,
+        720
+      ]
+    },
+    "art/square.jpg": {
+      "sha256": "13a5ae94b14db726dde3f32e513622621c3982a527e8de2e7cfbdb8e80a55b5e",
+      "size": [
+        1080,
+        1080
+      ]
+    },
+    "film/poster.jpg": {
+      "sha256": "5cf8c28d35d5ac214ed70893ac9ae57df7b056ac3febe4556cdf9bf0b037dbb3",
+      "size": [
+        1280,
+        720
+      ]
+    },
+    "social/instagram-Claude/portrait.jpg": {
+      "sha256": "7d2068f693ca3e558e923b9493f02c0e6fb2510ddb8b274a88ec6c0ce3579678",
+      "size": [
+        1080,
+        1350
+      ]
+    },
+    "social/instagram-Claude/square.jpg": {
+      "sha256": "13a5ae94b14db726dde3f32e513622621c3982a527e8de2e7cfbdb8e80a55b5e",
+      "size": [
+        1080,
+        1080
+      ]
+    },
+    "social/x-Claude/card.jpg": {
+      "sha256": "df688f126fd664e64eb7311923518be46c36dce2982898a207e0823d8dff9267",
+      "size": [
+        1200,
+        675
+      ]
+    }
+  },
+  "note": "Every image is drawn by code from the same scene and palette. No photograph and no external artwork is used.",
+  "palette": [
+    "#240046",
+    "#ff006e",
+    "#3a86ff",
+    "#8338ec",
+    "#ffffff"
+  ],
+  "scene": "neon",
+  "seed": 8144697
+}
